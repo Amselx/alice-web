@@ -3,31 +3,25 @@ import store from './store'
 import NProgress from 'nprogress' // Progress 进度条
 import 'nprogress/nprogress.css'// Progress 进度条样式
 import {Message} from 'element-ui'
-import {getToken} from '@/utils/auth'
+import {getToken} from './utils/auth'
 import Layout from "./views/layout/Layout"; // 验权
 
 const whiteList = ['/login'] // 不重定向白名单
 router.beforeEach((to, from, next) => {
     NProgress.start();
-    if (store.getters.asyncRouters.length > 0) {
-        debugger
-        return next();
-    }
-
-    // return next();
-    store.dispatch('GenerateRouters', null).then(() => {
-        router.addRoutes(store.getters.asyncRouters);
-        next({...to, replace: true}); // 确保 addRouters 已完成
-        // next();
-    });
-    // return next();
-    /*if (getToken()) {
+    let token = store.getters.token;
+    if (token) {
         if (to.path === '/login') {
             next({path: '/'});
             NProgress.done() // if current page is dashboard will not trigger	afterEach hook, so manually handle it
         } else {
-            if (store.getters.roles.length === 0) {
-                store.dispatch('GetInfo').then(res => { // 拉取用户信息
+            if (store.getters.username === null) {
+                store.dispatch('GetInfo').then(data => { // 拉取用户信息
+                    store.dispatch('GenerateRouters', data.authorities).then(() => {
+                        router.addRoutes(store.getters.asyncRouters);
+                        next({...to, replace: true}); // 确保 addRouters 已完成
+                        // next();
+                    });
                     next()
                 }).catch((err) => {
                     store.dispatch('FedLogOut').then(() => {
@@ -38,15 +32,16 @@ router.beforeEach((to, from, next) => {
             } else {
                 next()
             }
+
         }
     } else {
         if (whiteList.indexOf(to.path) !== -1) {
             next()
         } else {
             next('/login')
-            NProgress.done()
+            NProgress.done();
         }
-    }*/
+    }
 })
 
 router.afterEach(() => {
